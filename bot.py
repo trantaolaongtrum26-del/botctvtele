@@ -1,6 +1,7 @@
 import logging
 import os
 import csv
+import json
 import asyncio
 from datetime import datetime
 from keep_alive import keep_alive
@@ -14,13 +15,12 @@ FILE_ANH_NAP = "huong-dan-nap-usdt-binance.jpg"
 FILE_ANH_RUT = "huong-dan-nap-usdt.jpg"
 FILE_BANNER = "banner.jpg"
 FILE_DATA_KHACH = "danh_sach_bao_khach.csv"
+FILE_TK_CTV = "taikhoan_ctv.json"
 
-CTV_ACCOUNTS = {
+DEFAULT_ACCOUNTS = {
     "ctv01": "123456",
     "admin": "admin888",
-    "huydeptrai": "888888",
-    "tuananh": "999999",
-    "daily01": "111111"
+    "huydeptrai": "888888"
 }
 
 logging.basicConfig(
@@ -33,6 +33,21 @@ STATE_NORMAL = 0
 STATE_WAITING_ID = 1
 STATE_WAITING_PASS = 2
 STATE_LOGGED_IN = 3
+
+def load_ctv_accounts():
+    if not os.path.exists(FILE_TK_CTV):
+        with open(FILE_TK_CTV, 'w') as f:
+            json.dump(DEFAULT_ACCOUNTS, f)
+        return DEFAULT_ACCOUNTS
+    try:
+        with open(FILE_TK_CTV, 'r') as f:
+            return json.load(f)
+    except:
+        return DEFAULT_ACCOUNTS
+
+def save_ctv_accounts(accounts):
+    with open(FILE_TK_CTV, 'w') as f:
+        json.dump(accounts, f)
 
 def luu_bao_khach(telegram_id, username_khach, ma_ctv, so_tien):
     file_exists = os.path.isfile(FILE_DATA_KHACH)
@@ -61,26 +76,77 @@ def dem_so_khach(ma_ctv_can_tim):
                         pass
     return tong_khach, tong_tien
 
+async def admin_them_ctv(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ID_ADMIN_CHINH:
+        return
+    
+    try:
+        args = context.args
+        if len(args) < 2:
+            await update.message.reply_text("⚠️ Cách dùng: /themctv <tên> <pass>\nVD: /themctv tuananh 9999", parse_mode="HTML")
+            return
+        
+        new_user = args[0].strip()
+        new_pass = args[1].strip()
+        
+        accounts = load_ctv_accounts()
+        if new_user in accounts:
+            await update.message.reply_text(f"⚠️ CTV <b>{new_user}</b> đã tồn tại!", parse_mode="HTML")
+            return
+            
+        accounts[new_user] = new_pass
+        save_ctv_accounts(accounts)
+        await update.message.reply_text(f"✅ Đã thêm CTV: <b>{new_user}</b>\nMật khẩu: <b>{new_pass}</b>", parse_mode="HTML")
+    except:
+        await update.message.reply_text("❌ Lỗi hệ thống.")
+
+async def admin_xoa_ctv(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ID_ADMIN_CHINH:
+        return
+        
+    try:
+        args = context.args
+        if len(args) < 1:
+            await update.message.reply_text("⚠️ Cách dùng: /xoactv <tên>\nVD: /xoactv tuananh", parse_mode="HTML")
+            return
+            
+        del_user = args[0].strip()
+        accounts = load_ctv_accounts()
+        
+        if del_user not in accounts:
+            await update.message.reply_text(f"⚠️ Không tìm thấy CTV: <b>{del_user}</b>", parse_mode="HTML")
+            return
+            
+        del accounts[del_user]
+        save_ctv_accounts(accounts)
+        await update.message.reply_text(f"🗑️ Đã xóa CTV: <b>{del_user}</b>", parse_mode="HTML")
+    except:
+        await update.message.reply_text("❌ Lỗi hệ thống.")
+
 async def admin_quan_ly(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    if user_id != ID_ADMIN_CHINH: 
+    if update.effective_user.id != ID_ADMIN_CHINH: 
         await update.message.reply_text("⛔ <b>Bạn không có quyền truy cập Admin!</b>", parse_mode="HTML")
         return
 
-    tong_so_ctv = len(CTV_ACCOUNTS)
+    accounts = load_ctv_accounts()
+    tong_so_ctv = len(accounts)
     msg_report = f"👑 <b>BẢNG QUẢN TRỊ ADMIN</b> 👑\n"
     msg_report += f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
     msg_report += f"👥 Tổng số CTV: <b>{tong_so_ctv}</b> người\n\n"
     msg_report += "📊 <b>CHI TIẾT HIỆU QUẢ:</b>\n"
 
     total_all_money = 0
-    for ma_ctv in CTV_ACCOUNTS:
+    for ma_ctv in accounts:
         sl, tien = dem_so_khach(ma_ctv)
         total_all_money += tien
         icon = "🟢" if sl > 0 else "⚪"
         msg_report += f"{icon} <b>{ma_ctv}:</b> {sl} khách | {tien:,} k\n"
 
-    msg_report += f"\n💰 <b>TỔNG DOANH THU HỆ THỐNG: {total_all_money:,} k</b>"
+    msg_report += f"\n💰 <b>TỔNG DOANH THU HỆ THỐNG: {total_all_money:,} k</b>\n"
+    msg_report += f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
+    msg_report += f"➕ Thêm CTV: <code>/themctv user pass</code>\n"
+    msg_report += f"➖ Xóa CTV: <code>/xoactv user</code>"
+    
     await update.message.reply_text(msg_report, parse_mode="HTML")
 
 async def clear_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -173,7 +239,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if user_state == STATE_WAITING_ID:
-        if text in CTV_ACCOUNTS:
+        accounts = load_ctv_accounts()
+        if text in accounts:
             context.user_data['temp_id'] = text
             context.user_data['state'] = STATE_WAITING_PASS
             await update.message.reply_text(f"✅ ID <b>{text}</b> hợp lệ.\n🔑 <b>Nhập Mật Khẩu:</b>", parse_mode="HTML")
@@ -183,7 +250,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if user_state == STATE_WAITING_PASS:
         saved_id = context.user_data.get('temp_id')
-        if text == CTV_ACCOUNTS.get(saved_id):
+        accounts = load_ctv_accounts()
+        if text == accounts.get(saved_id):
             context.user_data['state'] = STATE_LOGGED_IN
             context.user_data['logged_ctv_code'] = saved_id
             kb_ctv = [[KeyboardButton("📊 Xem Thống Kê"), KeyboardButton("📞 Lấy File Đối Soát")], [KeyboardButton("❌ Đăng Xuất")]]
@@ -283,6 +351,9 @@ def main():
     
     app.add_handler(CommandHandler('admin', admin_quan_ly))
     app.add_handler(CommandHandler('quanly', admin_quan_ly))
+    
+    app.add_handler(CommandHandler('themctv', admin_them_ctv))
+    app.add_handler(CommandHandler('xoactv', admin_xoa_ctv))
 
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
