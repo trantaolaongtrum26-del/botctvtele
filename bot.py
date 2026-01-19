@@ -10,7 +10,7 @@ TOKEN_BOT = '8269134409:AAFCc7tB1kdc0et_4pnH52SoG_RyCu-UX0w'
 # Tên file ảnh (Chắc chắn rằng các file này nằm cùng thư mục với file code)
 FILE_ANH_NAP = "huong-dan-nap-usdt-binance.jpg"
 FILE_ANH_RUT = "huong-dan-nap-usdt.jpg"
-FILE_BANNER = "banner.jpg"  # <--- File ảnh Banner mới thêm
+FILE_BANNER = "banner.jpg"  # <--- File ảnh Banner
 
 # ================== LOGGING ==================
 logging.basicConfig(
@@ -19,38 +19,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ================== HÀM HỖ TRỢ: XÓA TIN NHẮN CŨ ==================
-async def delete_old_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Hàm này thực hiện:
-    1. Xóa tin nhắn người dùng vừa gửi (nút bấm).
-    2. Xóa tin nhắn cũ nhất mà bot đã gửi trước đó (nếu có lưu trong user_data).
-    """
-    # 1. Xóa tin nhắn người dùng vừa bấm (để dọn dẹp chat)
-    try:
-        if update.message:
-            await update.message.delete()
-    except Exception as e:
-        logger.warning(f"Không thể xóa tin nhắn user: {e}")
-
-    # 2. Xóa tin nhắn cũ của Bot lưu trong bộ nhớ
-    last_msg_id = context.user_data.get('last_bot_msg_id')
-    chat_id = update.effective_chat.id
-    
-    if last_msg_id:
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=last_msg_id)
-        except Exception as e:
-            logger.warning(f"Không thể xóa tin nhắn cũ của bot: {e}")
-
 # ================== MENU CHÍNH (START) ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Gọi hàm xóa tin nhắn cũ nếu muốn /start cũng làm sạch màn hình (tùy chọn)
-    # await delete_old_messages(update, context) 
-
     user = update.effective_user
-    # first_name = user.first_name or "Bạn" # (Không dùng nữa vì dùng text mẫu có sẵn)
-
+    
     # --- KHỞI TẠO BÀN PHÍM MENU ---
     menu_keyboard = [
         [KeyboardButton("🍀 Giới Thiệu Group"), KeyboardButton("🎁 Nhận Giftcode")],
@@ -62,11 +34,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = ReplyKeyboardMarkup(
         menu_keyboard,
         resize_keyboard=True,
-        one_time_keyboard=False,
+        one_time_keyboard=False, # Để False để menu luôn hiện
         input_field_placeholder="👇 Chọn tính năng bên dưới..."
     )
 
-    # --- NỘI DUNG MỚI THEO YÊU CẦU ---
+    # --- NỘI DUNG CHÀO MỪNG ---
     welcome_text = (
         "👋 <b>Xin chào Tân Thủ! Một ngày mới tuyệt vời để bắt đầu tại 78win!!!</b>\n\n"
         "🎉 <b>THƯỞNG CHÀO MỪNG TÂN THỦ</b> đã sẵn sàng.\n"
@@ -85,30 +57,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # --- GỬI ẢNH BANNER KÈM TEXT ---
     if os.path.exists(FILE_BANNER):
         with open(FILE_BANNER, 'rb') as f:
-            sent_msg = await update.message.reply_photo(
+            await update.message.reply_photo(
                 photo=f,
                 caption=welcome_text,
                 reply_markup=reply_markup,
                 parse_mode="HTML"
             )
-            # Lưu ID tin nhắn bot vừa gửi để lần sau xóa
-            context.user_data['last_bot_msg_id'] = sent_msg.message_id
     else:
         # Nếu không thấy ảnh banner thì gửi text không
-        sent_msg = await update.message.reply_text(
+        await update.message.reply_text(
             f"⚠️ Lỗi: Không tìm thấy file '{FILE_BANNER}'.\n\n" + welcome_text,
             reply_markup=reply_markup,
             parse_mode="HTML",
-             disable_web_page_preview=True
+            disable_web_page_preview=True
         )
-        context.user_data['last_bot_msg_id'] = sent_msg.message_id
 
 # ================== XỬ LÝ MENU (BUTTON CLICK) ==================
 async def handle_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     
-    # --- BƯỚC 1: XÓA TIN NHẮN CŨ TRƯỚC KHI GỬI MỚI ---
-    await delete_old_messages(update, context)
+    # --- KHÔNG CÒN LỆNH XÓA TIN NHẮN CŨ Ở ĐÂY NỮA ---
 
     msg_content = ""
     photo_path = None # Biến để lưu đường dẫn ảnh nếu cần gửi ảnh
@@ -156,10 +124,6 @@ async def handle_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # --- 4. NẠP RÚT (CÓ ẢNH) ---
     elif text == "🔒 Nạp/Rút USDT An Toàn":
-        # Phần này hơi đặc biệt vì gửi nhiều tin/ảnh. 
-        # Để đơn giản hóa việc "Xóa tin nhắn cũ", ta sẽ gộp caption lại hoặc chỉ gửi 1 ảnh chính.
-        # Ở đây mình sẽ gửi ảnh NẠP làm chính (theo logic code cũ).
-        
         msg_content = (
             "📥 <b>HƯỚNG DẪN NẠP USDT BẰNG BINANCE</b>\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
@@ -215,14 +179,13 @@ async def handle_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         msg_content = "🤔 <b>Vui lòng chọn các nút bấm có sẵn trên menu nhé!</b> 👇"
 
-    # --- BƯỚC 2: GỬI TIN NHẮN MỚI & LƯU ID ---
-    sent_msg = None
+    # --- BƯỚC 2: GỬI TIN NHẮN MỚI NGAY LẬP TỨC ---
     chat_id = update.effective_chat.id
 
     # Nếu có ảnh thì gửi ảnh
     if photo_path and os.path.exists(photo_path):
         with open(photo_path, 'rb') as f:
-            sent_msg = await context.bot.send_photo(
+            await context.bot.send_photo(
                 chat_id=chat_id,
                 photo=f,
                 caption=msg_content,
@@ -230,17 +193,12 @@ async def handle_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
     else:
         # Nếu không có ảnh (hoặc file lỗi) thì gửi text
-        sent_msg = await context.bot.send_message(
+        await context.bot.send_message(
             chat_id=chat_id,
             text=msg_content,
             parse_mode="HTML",
             disable_web_page_preview=True
         )
-
-    # --- BƯỚC 3: LƯU LẠI ID TIN NHẮN MỚI ĐỂ LẦN SAU XÓA ---
-    if sent_msg:
-        context.user_data['last_bot_msg_id'] = sent_msg.message_id
-
 
 # ================== MAIN ==================
 def main():
