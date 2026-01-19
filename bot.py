@@ -229,6 +229,65 @@ async def command_bao_khach(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         await update.message.reply_text("⚠️ Sai cú pháp! VD: <code>/F Huy - ctv01 - 200</code>", parse_mode="HTML")
 
+# ================== LỆNH MỚI: XEM CHI TIẾT CTV ==================
+async def admin_xem_chi_tiet(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # 1. Kiểm tra quyền Admin
+    if update.effective_user.id != ID_ADMIN_CHINH:
+        return
+
+    # 2. Lấy tên CTV từ lệnh gõ (VD: /chitiet ctv01)
+    try:
+        args = context.args
+        if len(args) < 1:
+            await update.message.reply_text("⚠️ Cách dùng: /chitiet <mã_ctv>\nVD: /chitiet ctv01", parse_mode="HTML")
+            return
+        
+        target_ctv = args[0].strip().lower()
+        
+        # 3. Đọc file CSV để tìm dữ liệu
+        if not os.path.exists(FILE_DATA_KHACH):
+            await update.message.reply_text("📭 Chưa có dữ liệu nào.", parse_mode="HTML")
+            return
+
+        found_rows = []
+        tong_tien_check = 0
+        
+        with open(FILE_DATA_KHACH, mode='r', encoding='utf-8-sig') as file:
+            reader = csv.reader(file)
+            next(reader, None) # Bỏ qua tiêu đề
+            for row in reader:
+                # row[3] là Mã CTV
+                if len(row) >= 5 and row[3].strip().lower() == target_ctv:
+                    # Format: ThờiGian - TênKhách - Tiền
+                    # Lấy giờ phút thôi cho ngắn (row[0] là full ngày giờ)
+                    short_time = row[0][11:16] # Cắt lấy HH:MM
+                    found_rows.append(f"🕒 <code>{short_time}</code> | 👤 <b>{row[2]}</b> | 💰 {row[4]}")
+                    
+                    # Cộng tổng tiền để check
+                    try:
+                        tien_clean = ''.join(filter(str.isdigit, row[4]))
+                        tong_tien_check += int(tien_clean)
+                    except: pass
+        
+        # 4. Gửi kết quả
+        if not found_rows:
+            await update.message.reply_text(f"❌ CTV <b>{target_ctv}</b> chưa có khách nào.", parse_mode="HTML")
+        else:
+            # Chỉ lấy 15 giao dịch gần nhất để tránh tin nhắn quá dài bị lỗi
+            last_rows = found_rows[-15:] 
+            
+            msg = f"📄 <b>LỊCH SỬ GIAO DỊCH: {target_ctv.upper()}</b>\n"
+            msg += f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
+            msg += "\n".join(last_rows)
+            msg += f"\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
+            msg += f"💵 <b>TỔNG CỘNG: {tong_tien_check:,}</b>"
+            
+            await update.message.reply_text(msg, parse_mode="HTML")
+
+    except Exception as e:
+        logger.error(f"Lỗi xem chi tiết: {e}")
+        await update.message.reply_text("❌ Có lỗi xảy ra khi đọc dữ liệu.")
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     user_state = context.user_data.get('state', STATE_NORMAL)
@@ -351,6 +410,7 @@ def main():
     
     app.add_handler(CommandHandler('admin', admin_quan_ly))
     app.add_handler(CommandHandler('quanly', admin_quan_ly))
+    app.add_handler(CommandHandler('chitiet', admin_xem_chi_tiet)) 
     
     app.add_handler(CommandHandler('themctv', admin_them_ctv))
     app.add_handler(CommandHandler('xoactv', admin_xoa_ctv))
@@ -360,3 +420,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
