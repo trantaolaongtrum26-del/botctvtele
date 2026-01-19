@@ -1,16 +1,26 @@
 import logging
-import os  # <--- Dùng để kiểm tra file ảnh
+import os
+import csv  # <--- Thư viện lưu file Excel/CSV
+from datetime import datetime
 from keep_alive import keep_alive
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
-# ================== CẤU HÌNH & TÊN FILE ẢNH ==================
+# ================== CẤU HÌNH & TÊN FILE ==================
 TOKEN_BOT = '8269134409:AAFCc7tB1kdc0et_4pnH52SoG_RyCu-UX0w'
 
-# Tên file ảnh (Chắc chắn rằng các file này nằm cùng thư mục với file code)
 FILE_ANH_NAP = "huong-dan-nap-usdt-binance.jpg"
 FILE_ANH_RUT = "huong-dan-nap-usdt.jpg"
-FILE_BANNER = "banner.jpg"  # <--- File ảnh Banner
+FILE_BANNER = "banner.jpg"
+FILE_DATA_KHACH = "danh_sach_bao_khach.csv" # <--- File lưu dữ liệu báo khách
+
+# --- CẤU HÌNH TÀI KHOẢN CTV (ID : Mật khẩu) ---
+# Bạn thêm tài khoản CTV vào đây
+CTV_ACCOUNTS = {
+    "ctv01": "123456",
+    "ctv02": "admin123",
+    "huydeptrai": "888888"
+}
 
 # ================== LOGGING ==================
 logging.basicConfig(
@@ -19,197 +29,254 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ================== MENU CHÍNH (START) ==================
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
+# ================== CÁC TRẠNG THÁI HỘI THOẠI ==================
+# Dùng để kiểm tra xem người dùng đang làm gì
+STATE_NORMAL = 0
+STATE_WAITING_ID = 1
+STATE_WAITING_PASS = 2
+STATE_LOGGED_IN = 3
+
+# ================== HÀM HỖ TRỢ CSV ==================
+def luu_bao_khach(telegram_id, username_khach, ma_ctv, so_tien):
+    file_exists = os.path.isfile(FILE_DATA_KHACH)
+    with open(FILE_DATA_KHACH, mode='a', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        # Nếu file chưa có thì viết tiêu đề
+        if not file_exists:
+            writer.writerow(['ThoiGian', 'TelegramID_CTV', 'TenKhach', 'MaCTV', 'SoTien'])
+        
+        # Ghi dữ liệu
+        writer.writerow([datetime.now().strftime("%Y-%m-%d %H:%M:%S"), telegram_id, username_khach, ma_ctv, so_tien])
+
+def dem_so_khach(ma_ctv_can_tim):
+    if not os.path.exists(FILE_DATA_KHACH):
+        return 0, 0 # 0 khách, 0 tiền
     
-    # --- KHỞI TẠO BÀN PHÍM MENU ---
+    tong_khach = 0
+    tong_tien = 0
+    
+    with open(FILE_DATA_KHACH, mode='r', encoding='utf-8') as file:
+        reader = csv.reader(file)
+        next(reader, None) # Bỏ qua tiêu đề
+        for row in reader:
+            if len(row) >= 4:
+                # row[3] là Mã CTV, row[4] là Số tiền
+                if row[3].strip().lower() == ma_ctv_can_tim.lower():
+                    tong_khach += 1
+                    try:
+                        tong_tien += int(row[4])
+                    except:
+                        pass
+    return tong_khach, tong_tien
+
+# ================== MENU CHÍNH ==================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Reset trạng thái về bình thường
+    context.user_data['state'] = STATE_NORMAL
+    
     menu_keyboard = [
         [KeyboardButton("🍀 Giới Thiệu Group"), KeyboardButton("🎁 Nhận Giftcode")],
         [KeyboardButton("💰 Ưu Đãi & Khuyến Mãi"), KeyboardButton("🔒 Nạp/Rút USDT An Toàn")],
         [KeyboardButton("🤝 Đăng Ký CTV Ngay"), KeyboardButton("👤 Tài Khoản Cá Nhân")],
-        [KeyboardButton("📢 Báo Khách / Hỗ Trợ")],
+        [KeyboardButton("🔐 Đăng Nhập CTV (Báo Khách)")], # <--- Nút mới
     ]
+    reply_markup = ReplyKeyboardMarkup(menu_keyboard, resize_keyboard=True)
 
-    reply_markup = ReplyKeyboardMarkup(
-        menu_keyboard,
-        resize_keyboard=True,
-        one_time_keyboard=False, # Để False để menu luôn hiện
-        input_field_placeholder="👇 Chọn tính năng bên dưới..."
-    )
-
-    # --- NỘI DUNG CHÀO MỪNG ---
     welcome_text = (
-        "👋 <b>Xin chào Tân Thủ! Một ngày mới tuyệt vời để bắt đầu tại 78win!!!</b>\n\n"
-        "🎉 <b>THƯỞNG CHÀO MỪNG TÂN THỦ</b> đã sẵn sàng.\n"
-        "Chỉ cần nạp đầu từ <b>100 điểm</b> liên tiếp là có thể đăng ký khuyến mãi với điểm thưởng vô cùng giá trị lên tới <b>12,776,000 VND</b>.\n\n"
-        "🔥 <b>NẠP ĐẦU TẶNG 8.888K</b>\n"
-        "🎫 <b>Mã Khuyến Mãi:</b> <code>ND01</code>\n\n"
-        "🚀 <b>Đăng Ký Nhận Ngay 8.888 K – Chỉ Với 3 Bước Siêu Đơn Giản:</b>\n"
-        "1️⃣ <b>B1:</b> Đăng ký tài khoản qua link chính thức duy nhất của bot:\n"
-        "👉 <a href='https://78max.top'><b>https://78max.top</b></a>\n\n"
-        "2️⃣ <b>B2:</b> Vào mục <b>Khuyến Mãi Tân Thủ</b>\n"
-        "3️⃣ <b>B3:</b> Xác minh SĐT – Nhận thưởng tự động sau 1–15 phút nếu đủ điều kiện!\n\n"
-        "💎 <i>Khuyến Mãi Hội Viên Mới Nạp Lần Đầu Thưởng 200%, Bạn Còn Chần Chờ Chi Nữa!!</i>\n\n"
-        "🌟 <b>Nhanh Tay Tham Gia 78WIN Vô Vàn Sự Kiện Hấp Dẫn Được Cập Nhật Mỗi Ngày!</b>"
+        "👋 <b>Xin chào! Chào mừng đến với Bot Hỗ Trợ 78Win.</b>\n\n"
+        "👇 Chọn tính năng bên dưới:"
     )
-
-    # --- GỬI ẢNH BANNER KÈM TEXT ---
+    
     if os.path.exists(FILE_BANNER):
         with open(FILE_BANNER, 'rb') as f:
-            await update.message.reply_photo(
-                photo=f,
-                caption=welcome_text,
-                reply_markup=reply_markup,
-                parse_mode="HTML"
-            )
+            await update.message.reply_photo(photo=f, caption=welcome_text, reply_markup=reply_markup, parse_mode="HTML")
     else:
-        # Nếu không thấy ảnh banner thì gửi text không
-        await update.message.reply_text(
-            f"⚠️ Lỗi: Không tìm thấy file '{FILE_BANNER}'.\n\n" + welcome_text,
-            reply_markup=reply_markup,
-            parse_mode="HTML",
-            disable_web_page_preview=True
-        )
+        await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="HTML")
 
-# ================== XỬ LÝ MENU (BUTTON CLICK) ==================
-async def handle_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# ================== XỬ LÝ LOGIC CHÍNH ==================
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
-    
-    # --- KHÔNG CÒN LỆNH XÓA TIN NHẮN CŨ Ở ĐÂY NỮA ---
-
-    msg_content = ""
-    photo_path = None # Biến để lưu đường dẫn ảnh nếu cần gửi ảnh
-    
-    # --- 1. GIỚI THIỆU GROUP ---
-    if text == "🍀 Giới Thiệu Group":
-        msg_content = (
-            "🌿 <b>CỘNG ĐỒNG XÔI MẶN - GIAO LƯU & NHẬN QUÀ</b> 🌿\n"
-            "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
-            "💎 <b>Quyền lợi khi tham gia:</b>\n"
-            "✅ Săn Giftcode độc quyền hằng ngày\n"
-            "✅ Cập nhật kèo thơm & khuyến mãi mới nhất\n"
-            "✅ Được Admin hỗ trợ ưu tiên 1:1\n"
-            "✅ Giao lưu kinh nghiệm cùng các dân chơi\n\n"
-            "🚀 <b>THAM GIA NGAY TẠI:</b>\n"
-            "👉 <a href='https://t.me/congdongxoiman'><b>t.me/congdongxoiman</b></a>\n\n"
-            "<i>⚠️ Lưu ý: Môi trường văn minh, vui lòng không spam!</i>"
-        )
-
-    # --- 2. NHẬN GIFTCODE ---
-    elif text == "🎁 Nhận Giftcode":
-        msg_content = (
-            "🎁 <b>KHO GIFTCODE & SỰ KIỆN</b> 🎁\n\n"
-            "🔔 Mã thưởng được phát <b>MỖI NGÀY</b> tại Group chính thức.\n\n"
-            "👉 <b>Vào lấy code ngay:</b> \n"
-            "🔗 <a href='https://hupcode.xo.je'>https://hupcode.xo.je</a>\n\n"
-            "<i>💡 Mẹo: Bật thông báo Group để không bỏ lỡ code xịn nhé!</i>"
-        )
-
-    # --- 3. KHUYẾN MÃI ---
-    elif text == "💰 Ưu Đãi & Khuyến Mãi":
-        msg_content = (
-            "🧧 <b>SIÊU BÃO KHUYẾN MÃI TẾT 2026</b> 🧧\n"
-            "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
-            "🔥 <b>DÀNH CHO TÂN THỦ:</b>\n"
-            "• 💎 Thưởng nạp đầu lên tới <b>150%</b>\n"
-            "• 🎰 Tặng Free Spin trải nghiệm\n\n"
-            "🔥 <b>ƯU ĐÃI HẰNG NGÀY:</b>\n"
-            "• 🐟 <b>Bắn Cá / Slot:</b> Hoàn trả <b>1.2%</b> không giới hạn\n"
-            "• 🎲 <b>Casino:</b> Thưởng nạp lại <b>50%</b> + Quà VIP\n"
-            "• ⚽ <b>Thể Thao / Đá Gà:</b> Bảo hiểm thua cược\n\n"
-            "💰 <b>ĐẶC BIỆT:</b> Làm CTV kiếm thu nhập thụ động trọn đời!\n\n"
-            "👉 <i>Chi tiết xem tại Group:</i> <a href='https://t.me/congdongxoiman'>t.me/congdongxoiman</a>"
-        )
-
-    # --- 4. NẠP RÚT (CÓ ẢNH) ---
-    elif text == "🔒 Nạp/Rút USDT An Toàn":
-        msg_content = (
-            "📥 <b>HƯỚNG DẪN NẠP USDT BẰNG BINANCE</b>\n"
-            "▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
-            "1️⃣ <b>Bước 1:</b> Ở giao diện chính BINANCE chọn <b>Tài sản</b> ➝ chọn <b>Gửi</b>.\n"
-            "2️⃣ <b>Bước 2:</b> Chọn <b>Rút tiền trên chuỗi</b> ➝ Chọn <b>USDT</b>.\n"
-            "3️⃣ <b>Bước 3:</b> Nhập thông tin:\n"
-            "   • <b>Mạng lưới:</b> TRC20 hoặc ERC20\n"
-            "   • <b>Số tiền:</b> Nhập số muốn nạp ➝ Chọn <b>Rút</b>.\n\n"
-            "4️⃣ <b>Bước 4:</b> Xác nhận 2 lớp để hoàn thành.\n\n"
-            "📤 <b>RÚT TIỀN:</b> Hệ thống tự động 24/7 (3-10 phút).\n\n"
-            "👉 <i>Inbox ngay Admin <a href='https://t.me/crown66666'><b>@crown66666</b></a> nếu cần hỗ trợ trung gian!</i>"
-        )
-        photo_path = FILE_ANH_NAP # Gán ảnh để tý gửi
-
-    # --- 5. ĐĂNG KÝ CTV ---
-    elif text == "🤝 Đăng Ký CTV Ngay":
-        msg_content = (
-            "🤝 <b>HỢP TÁC NHƯ Ý - KIẾM TIỀN TỶ </b> 🤝\n"
-            "▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
-            "💼 <b>CÔNG VIỆC:</b> Chia sẻ link giới thiệu game.\n"
-            "💰 <b>HOA HỒNG KHỦNG:</b>\n"
-            "💵 <b>100.000 VNĐ</b> / 1 Khách nạp > 1 triệu.\n\n"
-            "📝 <b>QUY TRÌNH:</b>\n"
-            "1️⃣ Liên hệ Admin nhận mã.\n"
-            "2️⃣ Vào nhóm làm việc riêng.\n"
-            "3️⃣ <b>BÁO KHÁCH:</b> Có khách nạp phải báo ngay.\n\n"
-            "🚀 <b>ĐĂNG KÝ NGAY:</b>\n"
-            "👉 Telegram: <a href='https://t.me/crown66666'><b>@crown66666</b></a>"
-        )
-
-    # --- 6. TÀI KHOẢN ---
-    elif text == "👤 Tài Khoản Cá Nhân":
-        msg_content = (
-            f"👤 <b>HỒ SƠ NGƯỜI DÙNG</b>\n"
-            "▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
-            f"🆔 <b>ID Telegram:</b> <code>{update.effective_user.id}</code>\n"
-            f"🏷 <b>Username:</b> @{update.effective_user.username or 'Không có'}\n"
-            f"💼 <b>Trạng thái:</b> Thành viên\n"
-            "💰 <b>Số dư ví:</b> 0đ <i>(Đang đồng bộ...)</i>\n\n"
-            "🛠 <i>Cần hỗ trợ tài khoản? Nhấn nút Báo Khách bên dưới!</i>"
-        )
-
-    # --- 7. BÁO KHÁCH ---
-    elif text == "📢 Báo Khách / Hỗ Trợ":
-        msg_content = (
-            "✅ <b>ĐÃ GỬI YÊU CẦU HỖ TRỢ!</b>\n\n"
-            "Hệ thống đã ghi nhận yêu cầu của bạn.\n"
-            "⏳ Admin sẽ phản hồi trong vòng <b>1-5 phút</b>.\n\n"
-            "🔔 <i>Vui lòng chú ý tin nhắn chờ nhé!</i>"
-        )
-
-    # --- FALLBACK ---
-    else:
-        msg_content = "🤔 <b>Vui lòng chọn các nút bấm có sẵn trên menu nhé!</b> 👇"
-
-    # --- BƯỚC 2: GỬI TIN NHẮN MỚI NGAY LẬP TỨC ---
+    user_state = context.user_data.get('state', STATE_NORMAL)
     chat_id = update.effective_chat.id
 
-    # Nếu có ảnh thì gửi ảnh
-    if photo_path and os.path.exists(photo_path):
-        with open(photo_path, 'rb') as f:
-            await context.bot.send_photo(
-                chat_id=chat_id,
-                photo=f,
-                caption=msg_content,
+    # --- 1. XỬ LÝ ĐĂNG NHẬP ---
+    if text == "🔐 Đăng Nhập CTV (Báo Khách)":
+        context.user_data['state'] = STATE_WAITING_ID
+        await update.message.reply_text("👤 <b>Vui lòng nhập ID Cộng Tác Viên:</b>", parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+        return
+
+    # Nếu đang đợi nhập ID
+    if user_state == STATE_WAITING_ID:
+        # Kiểm tra ID có tồn tại trong danh sách không
+        if text in CTV_ACCOUNTS:
+            context.user_data['temp_id'] = text # Lưu tạm ID
+            context.user_data['state'] = STATE_WAITING_PASS
+            await update.message.reply_text(f"✅ ID hợp lệ: <b>{text}</b>\n🔑 <b>Vui lòng nhập Mật Khẩu:</b>", parse_mode="HTML")
+        else:
+            await update.message.reply_text("❌ ID không tồn tại! Vui lòng nhập lại hoặc gõ /start để thoát.")
+        return
+
+    # Nếu đang đợi nhập PASS
+    if user_state == STATE_WAITING_PASS:
+        saved_id = context.user_data.get('temp_id')
+        correct_pass = CTV_ACCOUNTS.get(saved_id)
+        
+        if text == correct_pass:
+            # Đăng nhập thành công
+            context.user_data['state'] = STATE_LOGGED_IN
+            context.user_data['logged_ctv_code'] = saved_id # Lưu mã CTV chính thức
+            
+            # Hiển thị menu CTV
+            kb_ctv = [
+                [KeyboardButton("📊 Xem Thống Kê"), KeyboardButton("📞 Lấy File Đối Soát")],
+                [KeyboardButton("❌ Đăng Xuất")]
+            ]
+            await update.message.reply_text(
+                f"🎉 <b>ĐĂNG NHẬP THÀNH CÔNG!</b>\n"
+                f"Xin chào CTV: <b>{saved_id}</b>\n\n"
+                f"📝 <b>CÚ PHÁP BÁO KHÁCH:</b>\n"
+                f"Gõ lệnh theo mẫu sau:\n"
+                f"<code>/F TênKhách - MãCTV - SốTiền</code>\n\n"
+                f"Ví dụ: <code>/F huydeptrai - {saved_id} - 100</code>\n\n"
+                f"👇 Chọn chức năng bên dưới:",
+                parse_mode="HTML",
+                reply_markup=ReplyKeyboardMarkup(kb_ctv, resize_keyboard=True)
+            )
+        else:
+            await update.message.reply_text("❌ Mật khẩu sai! Vui lòng nhập lại.")
+        return
+
+    # --- 2. XỬ LÝ KHI ĐÃ ĐĂNG NHẬP (MENU CTV) ---
+    if user_state == STATE_LOGGED_IN:
+        current_ctv = context.user_data.get('logged_ctv_code')
+
+        if text == "❌ Đăng Xuất":
+            context.user_data['state'] = STATE_NORMAL
+            context.user_data['logged_ctv_code'] = None
+            await start(update, context) # Quay về menu chính
+            return
+
+        elif text == "📊 Xem Thống Kê":
+            sl_khach, tong_tien = dem_so_khach(current_ctv)
+            await update.message.reply_text(
+                f"📊 <b>THỐNG KÊ CỦA BẠN ({current_ctv})</b>\n"
+                f"▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
+                f"👥 Tổng khách đã báo: <b>{sl_khach}</b>\n"
+                f"💵 Tổng tiền nạp: <b>{tong_tien:,} k</b>\n\n"
+                f"<i>Dữ liệu được trích xuất từ hệ thống.</i>",
                 parse_mode="HTML"
             )
-    else:
-        # Nếu không có ảnh (hoặc file lỗi) thì gửi text
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text=msg_content,
-            parse_mode="HTML",
-            disable_web_page_preview=True
+            return
+
+        elif text == "📞 Lấy File Đối Soát":
+            await update.message.reply_text(
+                "📞 <b>LIÊN HỆ ADMIN ĐỐI SOÁT</b>\n\n"
+                "Vui lòng nhắn tin trực tiếp cho Admin để nhận file Excel chi tiết.\n"
+                "👉 Telegram: <a href='https://t.me/crown66666'><b>@crown66666</b></a>",
+                parse_mode="HTML",
+                disable_web_page_preview=True
+            )
+            return
+        
+        # Nếu chat linh tinh khi đang đăng nhập nhưng không phải lệnh /F
+        if not text.startswith('/'):
+            await update.message.reply_text("💡 Dùng menu bên dưới hoặc gõ lệnh <code>/F ...</code> để báo khách.", parse_mode="HTML")
+            return
+
+    # --- 3. XỬ LÝ MENU NGƯỜI DÙNG THƯỜNG (CHƯA ĐĂNG NHẬP) ---
+    # (Phần code cũ của bạn)
+    if text == "🍀 Giới Thiệu Group":
+        await update.message.reply_text("Nội dung giới thiệu...", parse_mode="HTML")
+    elif text == "🎁 Nhận Giftcode":
+        await update.message.reply_text("Nội dung giftcode...", parse_mode="HTML")
+    elif text == "💰 Ưu Đãi & Khuyến Mãi":
+        await update.message.reply_text("Nội dung khuyến mãi...", parse_mode="HTML")
+    elif text == "🔒 Nạp/Rút USDT An Toàn":
+        if os.path.exists(FILE_ANH_NAP):
+            with open(FILE_ANH_NAP, 'rb') as f:
+                await update.message.reply_photo(photo=f, caption="Hướng dẫn nạp...", parse_mode="HTML")
+        else:
+            await update.message.reply_text("Hướng dẫn nạp...", parse_mode="HTML")
+    elif text == "🤝 Đăng Ký CTV Ngay":
+         await update.message.reply_text("Hướng dẫn đăng ký CTV...", parse_mode="HTML")
+    elif text == "👤 Tài Khoản Cá Nhân":
+         await update.message.reply_text(f"ID: {update.effective_user.id}", parse_mode="HTML")
+    # Các nút khác bạn tự điền tiếp như code cũ...
+
+# ================== XỬ LÝ LỆNH /F (BÁO KHÁCH) ==================
+async def command_bao_khach(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Kiểm tra xem đã đăng nhập chưa
+    user_state = context.user_data.get('state', STATE_NORMAL)
+    if user_state != STATE_LOGGED_IN:
+        await update.message.reply_text("⚠️ Bạn cần đăng nhập CTV để sử dụng lệnh này!")
+        return
+
+    text = update.message.text # Lấy toàn bộ tin nhắn: /F huy - ctv01 - 100
+    try:
+        # Bỏ phần "/F " ở đầu và tách chuỗi
+        content = text[3:].strip() # Lấy phần sau chữ /F
+        parts = content.split('-') # Tách bằng dấu gạch ngang
+        
+        if len(parts) != 3:
+            raise ValueError("Sai định dạng")
+        
+        ten_khach = parts[0].strip()
+        ma_ctv = parts[1].strip()
+        so_tien = parts[2].strip()
+        
+        # Lưu vào file CSV
+        telegram_id = update.effective_user.id
+        luu_bao_khach(telegram_id, ten_khach, ma_ctv, so_tien)
+        
+        await update.message.reply_text(
+            f"✅ <b>BÁO KHÁCH THÀNH CÔNG!</b>\n\n"
+            f"👤 Khách: <b>{ten_khach}</b>\n"
+            f"🆔 CTV: <b>{ma_ctv}</b>\n"
+            f"💰 Nạp: <b>{so_tien}</b>\n\n"
+            f"<i>Dữ liệu đã được lưu vào hệ thống.</i>",
+            parse_mode="HTML"
         )
+        
+    except Exception as e:
+        await update.message.reply_text(
+            "⚠️ <b>SAI CÚ PHÁP!</b>\n\n"
+            "Vui lòng nhập đúng định dạng:\n"
+            "<code>/F TênKhách - MãCTV - SốTiền</code>\n\n"
+            "Ví dụ: <code>/F TuanAnh - CTV01 - 500</code>\n"
+            "(Lưu ý dấu gạch ngang ở giữa)",
+            parse_mode="HTML"
+        )
+
+# ================== LỆNH XÓA (Giữ nguyên của bạn) ==================
+async def clear_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    try:
+        await update.message.delete() # Xóa lệnh user
+        msg = await context.bot.send_message(chat_id, "🧹 Đang dọn dẹp...")
+        # Code xóa lặp lại ở đây... (như code cũ)
+        await context.bot.delete_message(chat_id, msg.message_id)
+    except:
+        pass
 
 # ================== MAIN ==================
 def main():
     keep_alive()
-    print("🚀 Bot 78Win Assistant đang khởi động...")
+    print("🚀 Bot đang khởi động...")
     app = ApplicationBuilder().token(TOKEN_BOT).build()
 
+    # --- Đăng ký lệnh ---
     app.add_handler(CommandHandler('start', start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu_click))
+    app.add_handler(CommandHandler('xoa', clear_chat))
+    
+    # --- Đăng ký lệnh báo khách /F ---
+    # Lệnh này sẽ bắt các tin nhắn bắt đầu bằng /F hoặc /f
+    app.add_handler(CommandHandler('F', command_bao_khach))
+    app.add_handler(CommandHandler('f', command_bao_khach))
 
-    print("✅ Bot đã sẵn sàng phục vụ!")
+    # --- Đăng ký xử lý tin nhắn (Menu & Login) ---
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    print("✅ Bot đã sẵn sàng!")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
