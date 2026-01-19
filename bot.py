@@ -19,8 +19,7 @@ FILE_TK_CTV = "taikhoan_ctv.json"
 
 DEFAULT_ACCOUNTS = {
     "ctv01": "123456",
-    "admin": "admin888",
-    "huydeptrai": "888888"
+    "admin": "admin888"
 }
 
 logging.basicConfig(
@@ -72,97 +71,115 @@ def dem_so_khach(ma_ctv_can_tim):
                     try:
                         tien_clean = ''.join(filter(str.isdigit, row[4]))
                         tong_tien += int(tien_clean)
-                    except:
-                        pass
+                    except: pass
     return tong_khach, tong_tien
 
 async def admin_them_ctv(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ID_ADMIN_CHINH:
-        return
-    
+    if update.effective_user.id != ID_ADMIN_CHINH: return
     try:
         args = context.args
         if len(args) < 2:
-            await update.message.reply_text("⚠️ Cách dùng: /themctv <tên> <pass>\nVD: /themctv tuananh 9999", parse_mode="HTML")
+            await update.message.reply_text("⚠️ VD: /themctv tuananh 9999", parse_mode="HTML")
             return
-        
         new_user = args[0].strip()
         new_pass = args[1].strip()
-        
         accounts = load_ctv_accounts()
         if new_user in accounts:
             await update.message.reply_text(f"⚠️ CTV <b>{new_user}</b> đã tồn tại!", parse_mode="HTML")
             return
-            
         accounts[new_user] = new_pass
         save_ctv_accounts(accounts)
-        await update.message.reply_text(f"✅ Đã thêm CTV: <b>{new_user}</b>\nMật khẩu: <b>{new_pass}</b>", parse_mode="HTML")
-    except:
-        await update.message.reply_text("❌ Lỗi hệ thống.")
+        await update.message.reply_text(f"✅ Đã thêm CTV: <b>{new_user}</b> - Pass: <b>{new_pass}</b>", parse_mode="HTML")
+    except: await update.message.reply_text("❌ Lỗi.")
 
 async def admin_xoa_ctv(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ID_ADMIN_CHINH:
-        return
-        
+    if update.effective_user.id != ID_ADMIN_CHINH: return
     try:
         args = context.args
         if len(args) < 1:
-            await update.message.reply_text("⚠️ Cách dùng: /xoactv <tên>\nVD: /xoactv tuananh", parse_mode="HTML")
+            await update.message.reply_text("⚠️ VD: /xoactv tuananh", parse_mode="HTML")
             return
-            
         del_user = args[0].strip()
         accounts = load_ctv_accounts()
-        
         if del_user not in accounts:
-            await update.message.reply_text(f"⚠️ Không tìm thấy CTV: <b>{del_user}</b>", parse_mode="HTML")
+            await update.message.reply_text(f"⚠️ Không tìm thấy: {del_user}", parse_mode="HTML")
             return
-            
         del accounts[del_user]
         save_ctv_accounts(accounts)
         await update.message.reply_text(f"🗑️ Đã xóa CTV: <b>{del_user}</b>", parse_mode="HTML")
-    except:
-        await update.message.reply_text("❌ Lỗi hệ thống.")
+    except: await update.message.reply_text("❌ Lỗi.")
 
 async def admin_quan_ly(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ID_ADMIN_CHINH: 
-        await update.message.reply_text("⛔ <b>Bạn không có quyền truy cập Admin!</b>", parse_mode="HTML")
+        await update.message.reply_text("⛔ Không có quyền!", parse_mode="HTML")
         return
 
     accounts = load_ctv_accounts()
-    tong_so_ctv = len(accounts)
-    msg_report = f"👑 <b>BẢNG QUẢN TRỊ ADMIN</b> 👑\n"
-    msg_report += f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
-    msg_report += f"👥 Tổng số CTV: <b>{tong_so_ctv}</b> người\n\n"
-    msg_report += "📊 <b>CHI TIẾT HIỆU QUẢ:</b>\n"
-
-    total_all_money = 0
+    msg_report = f"👑 <b>QUẢN TRỊ ADMIN</b> 👑\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n👥 Tổng CTV: <b>{len(accounts)}</b>\n\n📊 <b>HIỆU QUẢ:</b>\n"
+    total_all = 0
     for ma_ctv in accounts:
         sl, tien = dem_so_khach(ma_ctv)
-        total_all_money += tien
+        total_all += tien
         icon = "🟢" if sl > 0 else "⚪"
         msg_report += f"{icon} <b>{ma_ctv}:</b> {sl} khách | {tien:,} k\n"
 
-    msg_report += f"\n💰 <b>TỔNG DOANH THU HỆ THỐNG: {total_all_money:,} k</b>\n"
-    msg_report += f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
-    msg_report += f"➕ Thêm CTV: <code>/themctv user pass</code>\n"
-    msg_report += f"➖ Xóa CTV: <code>/xoactv user</code>"
-    
+    msg_report += f"\n💰 <b>TỔNG DOANH THU: {total_all:,} k</b>\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n➕ Thêm: <code>/themctv user pass</code>\n➖ Xóa: <code>/xoactv user</code>\n👀 Chi tiết: <code>/chitiet user</code>\n📥 Xuất File: <code>/xuatfile</code>"
     await update.message.reply_text(msg_report, parse_mode="HTML")
 
-async def clear_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
+async def admin_xem_chi_tiet(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ID_ADMIN_CHINH: return
     try:
-        await update.message.delete()
+        if len(context.args) < 1:
+            await update.message.reply_text("⚠️ VD: /chitiet ctv01", parse_mode="HTML")
+            return
+        target_ctv = context.args[0].strip().lower()
+        if not os.path.exists(FILE_DATA_KHACH): return
+        
+        found_rows = []
+        tong_tien_check = 0
+        with open(FILE_DATA_KHACH, mode='r', encoding='utf-8-sig') as file:
+            reader = csv.reader(file)
+            next(reader, None)
+            for row in reader:
+                if len(row) >= 5 and row[3].strip().lower() == target_ctv:
+                    short_time = row[0][11:16]
+                    found_rows.append(f"🕒 <code>{short_time}</code> | 👤 <b>{row[2]}</b> | 💰 {row[4]}")
+                    try: tong_tien_check += int(''.join(filter(str.isdigit, row[4])))
+                    except: pass
+        
+        if not found_rows: await update.message.reply_text(f"❌ CTV {target_ctv} chưa có khách.", parse_mode="HTML")
+        else:
+            msg = f"📄 <b>CHI TIẾT: {target_ctv.upper()}</b>\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n" + "\n".join(found_rows[-15:]) + f"\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n💵 <b>TỔNG: {tong_tien_check:,}</b>"
+            await update.message.reply_text(msg, parse_mode="HTML")
     except: pass
+
+async def admin_xuat_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ID_ADMIN_CHINH: return
     
-    status_msg = await context.bot.send_message(chat_id, "🧹 Đang dọn dẹp...", parse_mode="HTML")
+    if not os.path.exists(FILE_DATA_KHACH):
+        await update.message.reply_text("📭 Chưa có dữ liệu nào để xuất.")
+        return
+
+    await update.message.reply_text("⏳ Đang gửi file dữ liệu...")
+    try:
+        with open(FILE_DATA_KHACH, 'rb') as f:
+            await update.message.reply_document(
+                document=f,
+                filename=f"Data_Bao_Khach_{datetime.now().strftime('%d-%m-%Y')}.csv",
+                caption="📊 File thống kê doanh thu chi tiết."
+            )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Lỗi khi gửi file: {e}")
+
+async def clear_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try: await update.message.delete()
+    except: pass
+    msg = await context.bot.send_message(update.effective_chat.id, "🧹 Đang dọn dẹp...")
     for i in range(1, 21): 
-        try:
-            await context.bot.delete_message(chat_id=chat_id, message_id=update.message.message_id - i)
+        try: await context.bot.delete_message(update.effective_chat.id, update.message.message_id - i)
         except: pass
     await asyncio.sleep(1)
-    try:
-        await context.bot.delete_message(chat_id=chat_id, message_id=status_msg.message_id)
+    try: await context.bot.delete_message(update.effective_chat.id, msg.message_id)
     except: pass
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -172,6 +189,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     menu_keyboard = [
         [KeyboardButton("🍀 Giới Thiệu Group"), KeyboardButton("🎁 Nhận Giftcode")],
         [KeyboardButton("💰 Ưu Đãi & Khuyến Mãi"), KeyboardButton("🔒 Nạp/Rút USDT An Toàn")],
+        [KeyboardButton("🕵️ Dịch Vụ Thanh Toán Ẩn Danh")], 
         [KeyboardButton("🤝 Đăng Ký CTV Ngay"), KeyboardButton("👤 Tài Khoản Cá Nhân")],
         [KeyboardButton("🔐 Đăng Nhập CTV (Báo Khách)")], 
     ]
@@ -180,16 +198,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "👋 <b>Xin chào Tân Thủ! Một ngày mới tuyệt vời để bắt đầu tại 78win!!!</b>\n\n"
         "🎉 <b>THƯỞNG CHÀO MỪNG TÂN THỦ</b> đã sẵn sàng.\n"
-        "Chỉ cần nạp đầu từ <b>100 điểm</b> liên tiếp là có thể đăng ký khuyến mãi với điểm thưởng vô cùng giá trị lên tới <b>12,776,000 VND</b>.\n\n"
-        "🔥 <b>NẠP ĐẦU TẶNG 8.888K</b>\n"
-        "🎫 <b>Mã Khuyến Mãi:</b> <code>ND01</code>\n\n"
-        "🚀 <b>Đăng Ký Nhận Ngay 8.888 K – Chỉ Với 3 Bước Siêu Đơn Giản:</b>\n"
-        "1️⃣ <b>B1:</b> Đăng ký tài khoản qua link chính thức duy nhất của bot:\n"
-        "👉 <a href='https://78max.top'><b>https://78max.top</b></a>\n\n"
-        "2️⃣ <b>B2:</b> Vào mục <b>Khuyến Mãi Tân Thủ</b>\n"
-        "3️⃣ <b>B3:</b> Xác minh SĐT – Nhận thưởng tự động sau 1–15 phút nếu đủ điều kiện!\n\n"
-        "💎 <i>Khuyến Mãi Hội Viên Mới Nạp Lần Đầu Thưởng 200%, Bạn Còn Chần Chờ Chi Nữa!!</i>\n\n"
-        "🌟 <b>Nhanh Tay Tham Gia 78WIN Vô Vàn Sự Kiện Hấp Dẫn Được Cập Nhật Mỗi Ngày!</b>"
+        "Chỉ cần nạp đầu từ <b>100 điểm</b> liên tiếp là có thể đăng ký khuyến mãi...\n"
+        "👉 <a href='https://78max.top'><b>https://78max.top</b></a>"
     )
 
     if os.path.exists(FILE_BANNER):
@@ -199,94 +209,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="HTML", disable_web_page_preview=True)
 
 async def command_bao_khach(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_state = context.user_data.get('state', STATE_NORMAL)
-    if user_state != STATE_LOGGED_IN:
-        await update.message.reply_text("⚠️ <b>LỖI:</b> Bạn phải Đăng nhập CTV trước!", parse_mode="HTML")
+    if context.user_data.get('state', STATE_NORMAL) != STATE_LOGGED_IN:
+        await update.message.reply_text("⚠️ Cần đăng nhập CTV!", parse_mode="HTML")
         return
-
-    text = update.message.text
     try:
-        content = text[3:].strip()
-        parts = content.split('-')
+        parts = update.message.text[3:].strip().split('-')
         if len(parts) < 3: raise ValueError
-        
-        ten_khach = parts[0].strip()
-        ma_ctv = parts[1].strip()
-        so_tien = parts[2].strip()
+        ten, ma, tien = parts[0].strip(), parts[1].strip(), parts[2].strip()
         
         current_ctv = context.user_data.get('logged_ctv_code')
-        if ma_ctv.lower() != current_ctv.lower():
-             await update.message.reply_text(f"⚠️ Bạn đang đăng nhập acc <b>{current_ctv}</b> nhưng lại báo cho <b>{ma_ctv}</b>. Vui lòng kiểm tra lại!", parse_mode="HTML")
+        if ma.lower() != current_ctv.lower():
+             await update.message.reply_text(f"⚠️ Bạn đang login <b>{current_ctv}</b> nhưng báo cho <b>{ma}</b>!", parse_mode="HTML")
              return
-
-        luu_bao_khach(update.effective_user.id, ten_khach, ma_ctv, so_tien)
-        await update.message.reply_text(
-            f"✅ <b>BÁO KHÁCH THÀNH CÔNG!</b>\n"
-            f"👤 Khách: <b>{ten_khach}</b>\n🆔 CTV: <b>{ma_ctv}</b>\n💰 Nạp: <b>{so_tien}</b>\n\n"
-            f"📂 <i>Đã lưu vào hệ thống đối soát.</i>",
-            parse_mode="HTML"
-        )
-    except:
-        await update.message.reply_text("⚠️ Sai cú pháp! VD: <code>/F Huy - ctv01 - 200</code>", parse_mode="HTML")
-
-# ================== LỆNH MỚI: XEM CHI TIẾT CTV ==================
-async def admin_xem_chi_tiet(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # 1. Kiểm tra quyền Admin
-    if update.effective_user.id != ID_ADMIN_CHINH:
-        return
-
-    # 2. Lấy tên CTV từ lệnh gõ (VD: /chitiet ctv01)
-    try:
-        args = context.args
-        if len(args) < 1:
-            await update.message.reply_text("⚠️ Cách dùng: /chitiet <mã_ctv>\nVD: /chitiet ctv01", parse_mode="HTML")
-            return
-        
-        target_ctv = args[0].strip().lower()
-        
-        # 3. Đọc file CSV để tìm dữ liệu
-        if not os.path.exists(FILE_DATA_KHACH):
-            await update.message.reply_text("📭 Chưa có dữ liệu nào.", parse_mode="HTML")
-            return
-
-        found_rows = []
-        tong_tien_check = 0
-        
-        with open(FILE_DATA_KHACH, mode='r', encoding='utf-8-sig') as file:
-            reader = csv.reader(file)
-            next(reader, None) # Bỏ qua tiêu đề
-            for row in reader:
-                # row[3] là Mã CTV
-                if len(row) >= 5 and row[3].strip().lower() == target_ctv:
-                    # Format: ThờiGian - TênKhách - Tiền
-                    # Lấy giờ phút thôi cho ngắn (row[0] là full ngày giờ)
-                    short_time = row[0][11:16] # Cắt lấy HH:MM
-                    found_rows.append(f"🕒 <code>{short_time}</code> | 👤 <b>{row[2]}</b> | 💰 {row[4]}")
-                    
-                    # Cộng tổng tiền để check
-                    try:
-                        tien_clean = ''.join(filter(str.isdigit, row[4]))
-                        tong_tien_check += int(tien_clean)
-                    except: pass
-        
-        # 4. Gửi kết quả
-        if not found_rows:
-            await update.message.reply_text(f"❌ CTV <b>{target_ctv}</b> chưa có khách nào.", parse_mode="HTML")
-        else:
-            # Chỉ lấy 15 giao dịch gần nhất để tránh tin nhắn quá dài bị lỗi
-            last_rows = found_rows[-15:] 
-            
-            msg = f"📄 <b>LỊCH SỬ GIAO DỊCH: {target_ctv.upper()}</b>\n"
-            msg += f"▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
-            msg += "\n".join(last_rows)
-            msg += f"\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n"
-            msg += f"💵 <b>TỔNG CỘNG: {tong_tien_check:,}</b>"
-            
-            await update.message.reply_text(msg, parse_mode="HTML")
-
-    except Exception as e:
-        logger.error(f"Lỗi xem chi tiết: {e}")
-        await update.message.reply_text("❌ Có lỗi xảy ra khi đọc dữ liệu.")
+        luu_bao_khach(update.effective_user.id, ten, ma, tien)
+        await update.message.reply_text(f"✅ <b>THÀNH CÔNG!</b>\n👤 {ten} | 🆔 {ma} | 💰 {tien}", parse_mode="HTML")
+    except: await update.message.reply_text("⚠️ Sai mẫu: <code>/F Tên - Mã - Tiền</code>", parse_mode="HTML")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
@@ -294,7 +231,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if text == "🔐 Đăng Nhập CTV (Báo Khách)":
         context.user_data['state'] = STATE_WAITING_ID
-        await update.message.reply_text("👤 <b>Nhập ID Cộng Tác Viên:</b>", parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("👤 <b>Nhập ID CTV:</b>", parse_mode="HTML", reply_markup=ReplyKeyboardRemove())
         return
 
     if user_state == STATE_WAITING_ID:
@@ -302,9 +239,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if text in accounts:
             context.user_data['temp_id'] = text
             context.user_data['state'] = STATE_WAITING_PASS
-            await update.message.reply_text(f"✅ ID <b>{text}</b> hợp lệ.\n🔑 <b>Nhập Mật Khẩu:</b>", parse_mode="HTML")
-        else:
-            await update.message.reply_text("❌ ID sai! Nhập lại hoặc gõ /start để thoát.")
+            await update.message.reply_text("🔑 <b>Nhập Mật Khẩu:</b>", parse_mode="HTML")
+        else: await update.message.reply_text("❌ ID sai!")
         return
 
     if user_state == STATE_WAITING_PASS:
@@ -313,111 +249,73 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if text == accounts.get(saved_id):
             context.user_data['state'] = STATE_LOGGED_IN
             context.user_data['logged_ctv_code'] = saved_id
-            kb_ctv = [[KeyboardButton("📊 Xem Thống Kê"), KeyboardButton("📞 Lấy File Đối Soát")], [KeyboardButton("❌ Đăng Xuất")]]
-            await update.message.reply_text(
-                f"🎉 <b>ĐĂNG NHẬP THÀNH CÔNG!</b>\nXin chào CTV: <b>{saved_id}</b>\n\n"
-                f"📝 <b>CÚ PHÁP BÁO KHÁCH:</b>\n"
-                f"<code>/F TênKhách - MãCTV - SốTiền</code>\n",
-                parse_mode="HTML",
-                reply_markup=ReplyKeyboardMarkup(kb_ctv, resize_keyboard=True)
-            )
-        else:
-            await update.message.reply_text("❌ Sai mật khẩu!")
+            kb = [[KeyboardButton("📊 Xem Thống Kê"), KeyboardButton("📞 Lấy File Đối Soát")], [KeyboardButton("❌ Đăng Xuất")]]
+            await update.message.reply_text(f"🎉 <b>LOGIN THÀNH CÔNG: {saved_id}</b>\nBáo khách: <code>/F Tên - {saved_id} - Tiền</code>", parse_mode="HTML", reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True))
+        else: await update.message.reply_text("❌ Sai mật khẩu!")
         return
 
     if user_state == STATE_LOGGED_IN:
         current_ctv = context.user_data.get('logged_ctv_code')
-        if text == "❌ Đăng Xuất":
-            await start(update, context)
-            return
+        if text == "❌ Đăng Xuất": await start(update, context); return
         elif text == "📊 Xem Thống Kê":
             sl, tien = dem_so_khach(current_ctv)
             await update.message.reply_text(f"📊 <b>{current_ctv}</b>: {sl} khách | {tien:,} k", parse_mode="HTML")
             return
-        elif text == "📞 Lấy File Đối Soát":
-            await update.message.reply_text("📞 Liên hệ Admin: @crown66666", parse_mode="HTML")
-            return
-        if not text.startswith('/'):
-            await update.message.reply_text("💡 Dùng lệnh <code>/F ...</code> để báo khách.", parse_mode="HTML")
-            return
+        elif text == "📞 Lấy File Đối Soát": await update.message.reply_text("📞 LH Admin: @crown66666", parse_mode="HTML"); return
+        if not text.startswith('/'): await update.message.reply_text("💡 Dùng lệnh <code>/F ...</code>", parse_mode="HTML"); return
 
     msg_content = ""
     photo_path = None
 
     if text == "🍀 Giới Thiệu Group":
-        msg_content = (
-            "🌿 <b>CỘNG ĐỒNG XÔI MẶN</b> 🌿\n\n"
-            "✅ Săn Giftcode độc quyền\n"
-            "✅ Cập nhật kèo thơm\n"
-            "👉 <a href='https://t.me/congdongxoiman'><b>t.me/congdongxoiman</b></a>"
-        )
+        msg_content = "🌿 <b>CỘNG ĐỒNG XÔI MẶN</b>\n👉 <a href='https://t.me/congdongxoiman'>t.me/congdongxoiman</a>"
     elif text == "🎁 Nhận Giftcode":
-        msg_content = (
-            "🎁 <b>KHO GIFTCODE</b> 🎁\n\n"
-            "👉 <b>Lấy code ngay:</b> \n"
-            "🔗 <a href='https://hupcode.xo.je'>https://hupcode.xo.je</a>"
-        )
+        msg_content = "🎁 <b>KHO GIFTCODE</b>\n👉 <a href='https://hupcode.xo.je'>hupcode.xo.je</a>"
     elif text == "💰 Ưu Đãi & Khuyến Mãi":
-        msg_content = (
-            "🧧 <b>KHUYẾN MÃI TẾT 2026</b> 🧧\n\n"
-            "• Nạp đầu tặng <b>150%</b>\n"
-            "• Hoàn trả <b>1.2%</b> vô tận\n"
-            "👉 Xem tại: <a href='https://t.me/congdongxoiman'>Group Telegram</a>"
-        )
+        msg_content = "🧧 <b>KHUYẾN MÃI</b>\n• Nạp đầu 150%\n• Hoàn trả 1.2%..."
     elif text == "🔒 Nạp/Rút USDT An Toàn":
-        msg_content = (
-            "📥 <b>HƯỚNG DẪN NẠP USDT</b>\n"
-            "1️⃣ Vào Binance -> Ví -> Gửi.\n"
-            "2️⃣ Chọn mạng lưới TRC20/ERC20.\n"
-            "3️⃣ Nhập ví lấy trên Game.\n\n"
-            "👉 <i>Cần hỗ trợ: <a href='https://t.me/crown66666'>@crown66666</a></i>"
-        )
+        msg_content = "📥 <b>HƯỚNG DẪN NẠP USDT</b>\n1. Vào Binance -> Gửi\n2. Chọn TRC20\n3. Nhập ví Game\n👉 Admin: @crown66666"
         photo_path = FILE_ANH_NAP
+    elif text == "🕵️ Dịch Vụ Thanh Toán Ẩn Danh":
+        msg_content = (
+            "🛡️ <b>DỊCH VỤ THANH TOÁN ẨN DANH & TIỀN MẶT</b> 🛡️\n▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
+            "💡 <i>Quý khách thấy bất tiện khi nạp rút bằng tiền ảo USDT? Quý khách muốn bảo mật danh tính tuyệt đối?</i>\n\n"
+            "🚀 <b>CHÚNG TÔI CUNG CẤP GIẢI PHÁP:</b>\n"
+            "✅ <b>Bảo mật tuyệt đối:</b> Giao dịch qua các kênh thanh toán ẩn danh.\n"
+            "✅ <b>Hỗ trợ tiền mặt:</b> Có thể nhận/gửi tiền mặt trực tiếp tại các điểm giao dịch.\n"
+            "✅ <b>Chi phí siêu rẻ:</b> Phí dịch vụ chỉ <b>0.1%</b> (cho 1 chiều Nạp hoặc Rút).\n\n"
+            "👉 <b>LIÊN HỆ NGAY ADMIN ĐỂ ĐƯỢC HỖ TRỢ:</b>\n"
+            "💬 Telegram: <a href='https://t.me/crown66666'><b>@crown66666</b></a>"
+        )
     elif text == "🤝 Đăng Ký CTV Ngay":
-        msg_content = (
-            "🤝 <b>TUYỂN DỤNG ĐẠI LÝ/CTV</b>\n"
-            "💰 Hoa hồng: 100k/khách nạp đầu.\n"
-            "👉 Liên hệ Admin nhận Code CTV: <a href='https://t.me/crown66666'><b>@crown66666</b></a>"
-        )
+        msg_content = "🤝 <b>TUYỂN DỤNG CTV</b>\n💰 100k/khách nạp đầu.\n👉 Admin: @crown66666"
     elif text == "👤 Tài Khoản Cá Nhân":
-        msg_content = (
-            f"👤 <b>ID Của Bạn:</b> <code>{update.effective_user.id}</code>\n"
-            f"🏷 <b>Username:</b> @{update.effective_user.username}\n"
-            "🛠 Cần hỗ trợ? Nhấn nút Báo Khách!"
-        )
+        msg_content = f"👤 ID: <code>{update.effective_user.id}</code>\n@{update.effective_user.username}"
     elif text == "📢 Báo Khách / Hỗ Trợ":
-        msg_content = "✅ Đã gửi yêu cầu! Admin sẽ phản hồi sau 1-5 phút."
+        msg_content = "✅ Đã gửi hỗ trợ."
     else:
-        msg_content = "🤔 Vui lòng chọn menu bên dưới."
+        msg_content = "🤔 Chọn menu bên dưới."
 
-    chat_id = update.effective_chat.id
     if photo_path and os.path.exists(photo_path):
         with open(photo_path, 'rb') as f:
-            await context.bot.send_photo(chat_id, photo=f, caption=msg_content, parse_mode="HTML")
+            await context.bot.send_photo(update.effective_chat.id, photo=f, caption=msg_content, parse_mode="HTML")
     else:
-        await context.bot.send_message(chat_id, text=msg_content, parse_mode="HTML", disable_web_page_preview=True)
+        await context.bot.send_message(update.effective_chat.id, text=msg_content, parse_mode="HTML", disable_web_page_preview=True)
 
 def main():
     keep_alive()
     print("🚀 Bot running...")
     app = ApplicationBuilder().token(TOKEN_BOT).build()
-
     app.add_handler(CommandHandler('start', start))
-    app.add_handler(CommandHandler('xoa', clear_chat))
-    app.add_handler(CommandHandler('cls', clear_chat))
-    app.add_handler(CommandHandler('F', command_bao_khach))
-    app.add_handler(CommandHandler('f', command_bao_khach))
-    
-    app.add_handler(CommandHandler('admin', admin_quan_ly))
-    app.add_handler(CommandHandler('quanly', admin_quan_ly))
-    app.add_handler(CommandHandler('chitiet', admin_xem_chi_tiet)) 
-    
+    app.add_handler(CommandHandler(['xoa', 'cls'], clear_chat))
+    app.add_handler(CommandHandler(['F', 'f'], command_bao_khach))
+    app.add_handler(CommandHandler(['admin', 'quanly'], admin_quan_ly))
     app.add_handler(CommandHandler('themctv', admin_them_ctv))
     app.add_handler(CommandHandler('xoactv', admin_xoa_ctv))
-
+    app.add_handler(CommandHandler('chitiet', admin_xem_chi_tiet))
+    app.add_handler(CommandHandler(['xuatfile', 'export'], admin_xuat_file)) # <--- LỆNH MỚI
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
-
