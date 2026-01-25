@@ -10,7 +10,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Messa
 
 # ================== CẤU HÌNH HỆ THỐNG ==================
 TOKEN_BOT = '8269134409:AAFCc7tB1kdc0et_4pnH52SoG_RyCu-UX0w'
-ID_ADMIN_CHINH = 7218680985  # ID Admin của bạn
+ID_ADMIN_CHINH = 8457924201  # ID Admin của bạn
 
 # Tên các file dữ liệu
 FILE_ANH_NAP = "huong-dan-nap-usdt-binance.jpg"
@@ -409,4 +409,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
