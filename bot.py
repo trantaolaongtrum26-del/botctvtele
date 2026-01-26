@@ -277,7 +277,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sl, tien = dem_so_khach(current_ctv)
             await update.message.reply_text(f"📊 <b>THỐNG KÊ CỦA BẠN ({current_ctv})</b>\n▬▬▬▬▬▬▬▬▬▬▬▬▬\n👥 Tổng khách đã báo: <b>{sl}</b>\n💵 Tổng tiền nạp: <b>{tien:,} k</b>", parse_mode="HTML")
             return
-        elif text == "📞 Lấy File Đối Soát": await update.message.reply_text("📞 <b>LIÊN HỆ ADMIN ĐỐI SOÁT</b>\n\n👉 Telegram: <a href='https://t.me/crown66666'><b>@crown66666</b></a>", parse_mode="HTML", disable_web_page_preview=True); return
+        elif text == "📞 Lấy File Đối Soát": await update.message.reply_text("📞 <b>LIÊN HỆ ADMIN ĐỐI SOÁT</b>\n\n👉 Telegram: <a href='https://t.me/Bez_api'><b>@Bez_api</b></a>", parse_mode="HTML", disable_web_page_preview=True); return
         if not text.startswith('/'): await update.message.reply_text("💡 Dùng menu bên dưới hoặc gõ lệnh <code>/F ...</code> để báo khách.", parse_mode="HTML"); return
 
     # --- MENU NGƯỜI DÙNG THƯỜNG (FULL NỘI DUNG) ---
@@ -332,7 +332,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "   • <b>Số tiền:</b> Nhập số muốn nạp ➝ Chọn <b>Rút</b>.\n\n"
             "5️⃣ <b>Bước 5:</b> Kiểm tra lại thông tin, ấn <b>Xác nhận</b> và xác minh 2 lớp để hoàn thành.\n\n"
             "🔒 <i>Hệ thống tự động duyệt sau 3-5 phút.</i>\n\n"
-            "👉 <i>Inbox ngay Admin <a href='https://t.me/crown66666'><b>@crown66666</b></a> nếu cần hỗ trợ trung gian!</i>"
+            "👉 <i>Inbox ngay Admin <a href='https://t.me/Bez_api'><b>@Bez_api</b></a> nếu cần hỗ trợ trung gian!</i>"
         )
         photo_path = FILE_ANH_NAP
 
@@ -346,7 +346,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "✅ <b>Hỗ trợ tiền mặt:</b> Có thể nhận/gửi tiền mặt trực tiếp tại các điểm giao dịch.\n"
             "✅ <b>Chi phí siêu rẻ:</b> Phí dịch vụ chỉ <b>0.1%</b> (cho 1 chiều Nạp hoặc Rút).\n\n"
             "👉 <b>LIÊN HỆ NGAY ADMIN ĐỂ ĐƯỢC HỖ TRỢ:</b>\n"
-            "💬 Telegram: <a href='https://t.me/crown66666'><b>@crown66666</b></a>"
+            "💬 Telegram: <a href='https://t.me/Bez_api'><b>@Bez_api</b></a>"
         )
 
     elif text == "🤝 Đăng Ký CTV Ngay":
@@ -364,7 +364,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "2️⃣ Được add vào nhóm làm việc riêng.\n"
             "3️⃣ <b>BÁO KHÁCH:</b> Khi có khách nạp, phải báo vào nhóm ngay để tính lương.\n\n"
             "🚀 <b>ĐĂNG KÝ NGAY:</b>\n"
-            "👉 Telegram: <a href='https://t.me/crown66666'><b>@crown66666</b></a>"
+            "👉 Telegram: <a href='https://t.me/Bez_api'><b>@Bez_api</b></a>"
         )
     elif text == "👤 Tài Khoản Cá Nhân":
         msg_content = (
@@ -409,6 +409,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
