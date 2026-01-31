@@ -15,7 +15,7 @@ ID_ADMIN_CHINH = 8457924201  # ID Admin của bạn
 # Tên các file dữ liệu
 FILE_ANH_NAP = "huong-dan-nap-usdt-binance.jpg"
 FILE_ANH_RUT = "huong-dan-nap-usdt.jpg"
-FILE_BANNER = "banner.jpg"
+FILE_BANNER = "BM-B1.mp4"
 FILE_DATA_KHACH = "danh_sach_bao_khach.csv"
 FILE_TK_CTV = "taikhoan_ctv.json"
 
@@ -409,6 +409,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
