@@ -205,18 +205,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # NỘI DUNG CHÀO MỪNG ĐẦY ĐỦ
     welcome_text = (
-        "👋 <b>Xin chào Tân Thủ! Một ngày mới tuyệt vời để bắt đầu tại 78win!!!</b>\n\n"
+        "👋 <b>Xin chào Tân Thủ! Một ngày mới tuyệt vời để bắt đầu tại C168!!!</b>\n\n"
         "🎉 <b>THƯỞNG CHÀO MỪNG TÂN THỦ đã sẵn sàng.</b>\n"
         "Chỉ cần nạp đầu từ <b>100 điểm</b> liên tiếp là có thể đăng ký khuyến mãi với điểm thưởng vô cùng giá trị lên tới <b>12,776,000 VND</b>.\n\n"
         "🔥 <b>NẠP ĐẦU TẶNG 8.888K</b>\n"
         "🎫 <b>Mã Khuyến Mãi:</b> <code>ND01</code>\n\n"
         "🚀 <b>Đăng Ký Nhận Ngay 8.888 K – Chỉ Với 3 Bước Siêu Đơn Giản:</b>\n"
         "1️⃣ <b>B1:</b> Đăng ký tài khoản qua link chính thức duy nhất của bot:\n"
-        "👉 <a href='https://78max.top'><b>https://78max.top</b></a>\n\n"
+        "👉 <a href='https://c168b2.cc'><b>https://c168b2.cc/</b></a>\n\n"
         "2️⃣ <b>B2:</b> Vào mục <b>Khuyến Mãi Tân Thủ</b>\n"
         "3️⃣ <b>B3:</b> Xác minh SĐT – Nhận thưởng tự động sau 1–15 phút nếu đủ điều kiện!\n\n"
         "💎 <i>Khuyến Mãi Hội Viên Mới Nạp Lần Đầu Thưởng 200%, Bạn Còn Chần Chờ Chi Nữa!!</i>\n\n"
-        "🌟 <b>Nhanh Tay Tham Gia 78WIN Vô Vàn Sự Kiện Hấp Dẫn Được Cập Nhật Mỗi Ngày!</b>"
+        "🌟 <b>Nhanh Tay Tham Gia C168 Vô Vàn Sự Kiện Hấp Dẫn Được Cập Nhật Mỗi Ngày!</b>"
     )
 
     if os.path.exists(FILE_BANNER):
@@ -409,6 +409,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
