@@ -212,7 +212,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🎫 <b>Mã Khuyến Mãi:</b> <code>ND01</code>\n\n"
         "🚀 <b>Đăng Ký Nhận Ngay 8.888 K – Chỉ Với 3 Bước Siêu Đơn Giản:</b>\n"
         "1️⃣ <b>B1:</b> Đăng ký tài khoản qua link chính thức duy nhất của bot:\n"
-        "👉 <a href='https://c168b2.cc'><b>https://c168b2.cc/</b></a>\n\n"
+        "👉 <a href='https://c168c.cam/'><b>https://c168c.cam/</b></a>\n\n"
         "2️⃣ <b>B2:</b> Vào mục <b>Khuyến Mãi Tân Thủ</b>\n"
         "3️⃣ <b>B3:</b> Xác minh SĐT – Nhận thưởng tự động sau 1–15 phút nếu đủ điều kiện!\n\n"
         "💎 <i>Khuyến Mãi Hội Viên Mới Nạp Lần Đầu Thưởng 200%, Bạn Còn Chần Chờ Chi Nữa!!</i>\n\n"
@@ -409,6 +409,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
