@@ -29,8 +29,8 @@ Private_Key = "9ccce2b2e97e8cfd5815f9492e94be32"
 
 # --- CẤU HÌNH WEBHOOK (RENDER) ---
 # QUAN TRỌNG: Thay link Render của bạn vào đây sau khi deploy
-DOMAIN_RENDER = "https://thay-link-render-cua-ban-vao-day.onrender.com"
-CALLBACK_URL = f"{DOMAIN_RENDER}/callback"
+DOMAIN_RENDER = "https://botctvtele-04kd.onrender.com"
+CALLBACK_URL = f"https://botctvtele-04kd.onrender.com/callback"
 
 # --- FILE DỮ LIỆU ---
 FILE_ANH_NAP = "huong-dan-nap-usdt-binance.jpg"
@@ -455,3 +455,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
