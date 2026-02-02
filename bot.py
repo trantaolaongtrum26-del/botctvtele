@@ -457,7 +457,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🚀 <b>CHÚNG TÔI CUNG CẤP GIẢI PHÁP:</b>\n"
             "✅ <b>Bảo mật tuyệt đối:</b> Giao dịch qua các kênh thanh toán ẩn danh, không lộ danh tính.\n"
             "✅ <b>Hỗ trợ tiền mặt:</b> Có thể nhận/gửi tiền mặt trực tiếp tại các điểm giao dịch.\n"
-            "✅ <b>Chi phí siêu rẻ:</b> Phí dịch vụ chỉ <b>0.1%</b> (cho 1 chiều Nạp hoặc Rút).\n\n"
+            "✅ <b>Chi phí siêu rẻ:</b> Phí dịch vụ chỉ <b>1%</b> (cho 1 chiều Nạp hoặc Rút).\n\n"
             "👉 <b>LIÊN HỆ NGAY ADMIN ĐỂ ĐƯỢC HỖ TRỢ:</b>\n"
             "💬 Telegram: <a href='https://t.me/Bez_api'><b>@Bez_api</b></a>"
         )
@@ -636,3 +636,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
