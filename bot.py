@@ -28,14 +28,14 @@ API_KEY = "2a10ba0198d7cabdb6ec163cc2990a95"
 Private_Key = "9ccce2b2e97e8cfd5815f9492e94be32"
 
 # --- CẤU HÌNH WEBHOOK (RENDER) ---
-# QUAN TRỌNG: Thay link Render của bạn vào đây sau khi deploy
+# Link Webhook chuẩn theo Render của bạn
 DOMAIN_RENDER = "https://botctvtele-04kd.onrender.com"
-CALLBACK_URL = f"https://botctvtele-04kd.onrender.com/callback"
+CALLBACK_URL = f"{DOMAIN_RENDER}/callback"
 
 # --- FILE DỮ LIỆU ---
 FILE_ANH_NAP = "huong-dan-nap-usdt-binance.jpg"
 FILE_ANH_RUT = "huong-dan-nap-usdt.jpg"
-FILE_BANNER = "banner.png"
+FILE_BANNER = "banner.png" # Đã đổi thành file ảnh cho nhẹ, tránh lỗi deploy
 FILE_DATA_KHACH = "danh_sach_bao_khach.csv"
 FILE_TK_CTV = "taikhoan_ctv.json"
 
@@ -52,7 +52,7 @@ STATE_WAITING_PASS = 2
 STATE_LOGGED_IN = 3
 
 # ==============================================================================
-# 🔧 PHẦN 2: XỬ LÝ THANH TOÁN & API (MỚI THÊM)
+# 🔧 PHẦN 2: XỬ LÝ THANH TOÁN & API
 # ==============================================================================
 
 def generate_checksum(body_json_str, secret_key):
@@ -93,24 +93,24 @@ def create_payment_order(amount, bank_type, user_id, user_name):
         return None
 
 # ==============================================================================
-# 🌐 PHẦN 3: SERVER WEBHOOK FLASK (THAY THẾ KEEP_ALIVE)
+# 🌐 PHẦN 3: SERVER WEBHOOK FLASK
 # ==============================================================================
 app = Flask(__name__)
-# Tắt log rác Flask
 log_flask = logging.getLogger('werkzeug')
 log_flask.setLevel(logging.ERROR)
 
-bot_app_instance = None # Biến global để gọi bot từ Flask
+bot_app_instance = None 
 
 @app.route('/')
 def index():
-    return "Bot C168 Payment is running!", 200
+    return "Bot Payment is running!", 200
 
 @app.route('/callback', methods=['POST'])
 async def payment_callback():
     """Nhận thông báo khi khách nạp tiền thành công"""
     try:
         data = request.json
+        # Kiểm tra err_code = 0 là thành công
         if data and data.get('err_code') == 0:
             amount = data.get('amount', 0)
             ref_id = data.get('ref_id', 'Unknown')
@@ -134,7 +134,7 @@ async def payment_callback():
                 
                 # 2. Báo Khách
                 try:
-                    if user_id.isdigit():
+                    if str(user_id).isdigit():
                         await bot_app_instance.bot.send_message(chat_id=int(user_id), text=f"✅ Giao dịch thành công! Đã nhận <b>{amount:,} VNĐ</b>.\nChúc bạn chơi vui vẻ!", parse_mode="HTML")
                 except: pass
 
@@ -147,7 +147,7 @@ def run_flask():
     app.run(host='0.0.0.0', port=8080, use_reloader=False)
 
 # ==============================================================================
-# 📂 PHẦN 4: CÁC HÀM XỬ LÝ DỮ LIỆU CŨ (GIỮ NGUYÊN)
+# 📂 PHẦN 4: CÁC HÀM QUẢN LÝ CTV
 # ==============================================================================
 def load_ctv_accounts():
     if not os.path.exists(FILE_TK_CTV):
@@ -184,7 +184,7 @@ def dem_so_khach(ma_ctv_can_tim):
     return tong_khach, tong_tien
 
 # ==============================================================================
-# 👮 PHẦN 5: CHỨC NĂNG ADMIN & HỆ THỐNG
+# 👮 PHẦN 5: CHỨC NĂNG ADMIN
 # ==============================================================================
 async def admin_them_ctv(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ID_ADMIN_CHINH: return
@@ -264,14 +264,14 @@ async def clear_chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ==============================================================================
 
 async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Xử lý các nút bấm Inline (Nạp tiền, Chọn Bank)"""
+    """Xử lý nút bấm Inline"""
     query = update.callback_query
     await query.answer()
     data = query.data
     user_id = query.from_user.id
     user_name = query.from_user.username or "Unknown"
 
-    # 1. KHÁCH BẤM "NẠP TỰ ĐỘNG" -> HIỆN MỆNH GIÁ
+    # 1. KHÁCH BẤM "NẠP TỰ ĐỘNG"
     if data == "menu_nap_tien":
         keyboard = [
             [InlineKeyboardButton("💎 50.000đ", callback_data="chon_50000")],
@@ -282,7 +282,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         ]
         await query.message.reply_text("👇 Chọn <b>MỆNH GIÁ</b> muốn nạp:", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="HTML")
 
-    # 2. KHÁCH CHỌN TIỀN -> HIỆN BANK
+    # 2. KHÁCH CHỌN TIỀN
     elif data.startswith("chon_"):
         amount = data.split("_")[1]
         keyboard_banks = [
@@ -294,7 +294,7 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
         ]
         await query.edit_message_text(f"💰 Nạp: <b>{int(amount):,} VNĐ</b>\n👇 Chọn <b>NGÂN HÀNG</b> chuyển khoản:", reply_markup=InlineKeyboardMarkup(keyboard_banks), parse_mode="HTML")
 
-    # 3. KHÁCH CHỌN BANK -> GỌI API -> LẤY QR
+    # 3. KHÁCH CHỌN BANK -> GỌI API
     elif data.startswith("pay_"):
         _, bank_code, amount_str = data.split("_")
         amount = int(amount_str)
@@ -321,21 +321,24 @@ async def handle_callback_query(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['state'] = STATE_NORMAL
+    
+    # === MENU CHÍNH: CÓ NÚT "NẠP TIỀN (AUTO)" ===
     menu_keyboard = [
-        [KeyboardButton("🍀 Giới Thiệu Group"), KeyboardButton("🎁 Nhận Giftcode")],
-        [KeyboardButton("💰 Ưu Đãi & Khuyến Mãi"), KeyboardButton("🔒 Nạp/Rút USDT An Toàn")],
+        [KeyboardButton("💳 NẠP TIỀN (AUTO)"), KeyboardButton("🎁 Nhận Giftcode")], 
+        [KeyboardButton("💰 Ưu Đãi & Khuyến Mãi"), KeyboardButton("🍀 Giới Thiệu Group")],
         [KeyboardButton("🕵️ Dịch Vụ Thanh Toán Ẩn Danh")], 
         [KeyboardButton("🤝 Đăng Ký CTV Ngay"), KeyboardButton("👤 Tài Khoản Cá Nhân")],
         [KeyboardButton("🔐 Đăng Nhập CTV (Báo Khách)")], 
     ]
     reply_markup = ReplyKeyboardMarkup(menu_keyboard, resize_keyboard=True)
+    
     welcome_text = "👋 <b>Xin chào! Chào mừng đến với C168!!!</b>\n\n🔥 <b>NẠP ĐẦU TẶNG 8.888K</b> - Mã: <code>ND01</code>\n👉 <a href='https://c168c.cam/'><b>https://c168c.cam/</b></a>"
 
     if os.path.exists(FILE_BANNER):
         try:
             with open(FILE_BANNER, 'rb') as f:
-                await update.message.reply_video(video=f, caption=welcome_text, reply_markup=reply_markup, parse_mode="HTML")
-        except: # Fallback nếu gửi video lỗi
+                await update.message.reply_photo(photo=f, caption=welcome_text, reply_markup=reply_markup, parse_mode="HTML")
+        except: 
              await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="HTML")
     else:
         await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode="HTML")
@@ -383,23 +386,32 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "🎁 Nhận Giftcode": msg = "🎁 <b>KHO GIFTCODE</b>\n👉 <a href='https://hupcode.xo.je'>hupcode.xo.je</a>"
     elif text == "💰 Ưu Đãi & Khuyến Mãi": msg = "🧧 <b>KHUYẾN MÃI TẾT 2026</b>\n• Nạp đầu 150%\n• Hoàn trả 1.2%..."
     
-    # === CẬP NHẬT PHẦN NẠP TIỀN ===
-    elif text == "🔒 Nạp/Rút USDT An Toàn":
+    # === XỬ LÝ NÚT NẠP TIỀN AUTO ===
+    elif text == "💳 NẠP TIỀN (AUTO)":
         msg = (
-            "💳 <b>CỔNG THANH TOÁN TỰ ĐỘNG C168</b>\n"
+            "💳 <b>CỔNG NẠP TIỀN TỰ ĐỘNG</b>\n"
             "▬▬▬▬▬▬▬▬▬▬▬▬▬▬\n\n"
-            "1️⃣ <b>Nạp USDT:</b> Vui lòng làm theo ảnh hướng dẫn bên dưới.\n"
-            "2️⃣ <b>Nạp Bank/QR (Siêu Tốc):</b> Bấm nút bên dưới để lấy mã QR chuyển khoản tự động.\n\n"
-            "<i>Hệ thống tự động cộng điểm sau 1-3 phút.</i>"
+            "👇 <b>Vui lòng chọn hình thức nạp:</b>\n"
+            "<i>(Hệ thống tự động lên điểm sau 1-3 phút)</i>"
         )
-        # Nút bấm kích hoạt Inline Menu
-        keyboard_nap = [[InlineKeyboardButton("⚡ Nạp Tự Động (Lấy QR)", callback_data="menu_nap_tien")]]
+        # Nút bấm kích hoạt
+        keyboard_nap = [
+            [InlineKeyboardButton("⚡ Nạp Bank/QR (Tự động)", callback_data="menu_nap_tien")],
+            [InlineKeyboardButton("💎 Hướng dẫn nạp USDT", callback_data="huong_dan_usdt")] # Chưa làm chức năng này thì để placeholder hoặc bỏ đi
+        ]
         
+        # Nếu có ảnh hướng dẫn thì gửi kèm
         if os.path.exists(FILE_ANH_NAP):
-            with open(FILE_ANH_NAP, 'rb') as f:
+             with open(FILE_ANH_NAP, 'rb') as f:
                 await context.bot.send_photo(update.effective_chat.id, photo=f, caption=msg, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard_nap))
         else:
-            await context.bot.send_message(update.effective_chat.id, text=msg, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard_nap))
+             await context.bot.send_message(update.effective_chat.id, text=msg, parse_mode="HTML", reply_markup=InlineKeyboardMarkup(keyboard_nap))
+        return
+    
+    # Hỗ trợ cả nút cũ nếu người dùng chưa cập nhật menu
+    elif text == "🔒 Nạp/Rút USDT An Toàn":
+        keyboard_nap = [[InlineKeyboardButton("⚡ Nạp Tự Động (Lấy QR)", callback_data="menu_nap_tien")]]
+        await context.bot.send_message(update.effective_chat.id, text="👇 Bấm bên dưới để lấy QR:", reply_markup=InlineKeyboardMarkup(keyboard_nap))
         return
 
     elif text == "🕵️ Dịch Vụ Thanh Toán Ẩn Danh": msg = "🛡️ <b>DỊCH VỤ ẨN DANH</b>\nPhí 0.1% - LH: @Bez_api"
@@ -411,7 +423,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if msg: await context.bot.send_message(update.effective_chat.id, text=msg, parse_mode="HTML", disable_web_page_preview=True)
 
 async def command_bao_khach(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Logic báo khách cũ (giữ nguyên)
     if context.user_data.get('state') != STATE_LOGGED_IN:
         await update.message.reply_text("⚠️ Cần đăng nhập CTV!"); return
     try:
@@ -428,7 +439,6 @@ async def command_bao_khach(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # 🚀 MAIN EXECUTION
 # ==============================================================================
 def main():
-    # 1. Chạy Webhook Flask (Thay cho keep_alive)
     flask_thread = Thread(target=run_flask)
     flask_thread.start()
 
@@ -436,7 +446,6 @@ def main():
     global bot_app_instance
     bot_app_instance = ApplicationBuilder().token(TOKEN_BOT).build()
 
-    # Handlers
     bot_app_instance.add_handler(CommandHandler('start', start))
     bot_app_instance.add_handler(CommandHandler(['xoa', 'cls'], clear_chat))
     bot_app_instance.add_handler(CommandHandler(['F', 'f'], command_bao_khach))
@@ -446,14 +455,10 @@ def main():
     bot_app_instance.add_handler(CommandHandler('chitiet', admin_xem_chi_tiet))
     bot_app_instance.add_handler(CommandHandler(['xuatfile', 'export'], admin_xuat_file))
     
-    # Callback Handler (Quan trọng cho nút bấm Nạp tiền)
     bot_app_instance.add_handler(CallbackQueryHandler(handle_callback_query))
-    
     bot_app_instance.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     bot_app_instance.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
-
-
