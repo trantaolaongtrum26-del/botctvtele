@@ -215,7 +215,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     menu_keyboard = [
         [KeyboardButton("🍀 Giới Thiệu Group"), KeyboardButton("🎁 Nhận Giftcode")],
-        [KeyboardButton("💰 Ưu Đãi & Khuyến Mãi"), KeyboardButton("💸 Nạp Tiền")],
+        [KeyboardButton("💰 Ưu Đãi & Khuyến Mãi"), KeyboardButton("💸 Nạp Tiền (Ẩn danh)")],
         [KeyboardButton("🔍 Check Trạng Thái Lệnh"), KeyboardButton("🔒 Hướng Dẫn Nạp/Rút USDT")],
         [KeyboardButton("🕵️ Dịch Vụ Thanh Toán Ẩn Danh"), KeyboardButton("🤝 Đăng Ký CTV Ngay")],
         [KeyboardButton("👤 Tài Khoản Cá Nhân"), KeyboardButton("🔐 Đăng Nhập CTV (Báo Khách)")], 
@@ -294,7 +294,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not text.startswith('/'): await update.message.reply_text("💡 Dùng menu bên dưới hoặc gõ lệnh <code>/F ...</code> để báo khách.", parse_mode="HTML"); return
 
     # --- 2. NẠP TIỀN ---
-    if text == "💸 Nạp Tiền":
+    if text == "💸 Nạp Tiền (Ẩn danh)":
         kb = [
             [KeyboardButton("🪙 Nạp USDT"), KeyboardButton("🏦 Nạp Ngân Hàng")],
             [KeyboardButton("📱 Nạp Momo"), KeyboardButton("🟢 Nạp ZaloPay")],
@@ -636,4 +636,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
